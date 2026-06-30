@@ -1,12 +1,19 @@
-FROM debian:trixie
+ARG DEBIAN_BASE="dhi.io/debian-base:trixie-debian13-dev"
 
-RUN groupadd -r mysql && useradd -r -g mysql mysql
+FROM ${DEBIAN_BASE} AS build_stage
 
-RUN apt-get update
+ARG DEBIAN_BASE
+ARG KAMAILIO_SRC_DIR=kamailio
+ARG KAMAILIO_TESTS_ROOT=kamailio-tests
+ARG KAMAILIO_SERVER_EXTRA_OPTIONS
 
-RUN DEBIAN_FRONTEND=noninteractive apt-get install --assume-yes apt-utils \
+RUN DEBIAN_FRONTEND=noninteractive apt-get update
+RUN apt-get -y upgrade
+RUN DEBIAN_FRONTEND=noninteractive apt-get -y install --assume-yes \
+  apt-utils passwd \
   autoconf gcc g++ make cmake procps \
   coreutils exuberant-ctags curl gawk gdb git jq lynx netcat-traditional ngrep sed sip-tester vim wget \
+  sipsak \
   bison libtool \
   debhelper \
   default-libmysqlclient-dev \
@@ -67,7 +74,14 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install --assume-yes apt-utils \
   unixodbc-dev \
   uuid-dev \
   xsltproc \
-  zlib1g-dev
+  zlib1g-dev \
+  libfips203-0 \
+  libfips203-dev \
+  openssl-provider-fips \
+  gettext-base \
+  hostname
+
+RUN groupadd -r mysql && useradd -r -g mysql mysql
 
 ENV MYSQL_ROOT_PASSWORD=ktestsrootpw
 RUN DEBIAN_FRONTEND=noninteractive apt-get install --assume-yes default-mysql-client default-mysql-server
@@ -80,14 +94,14 @@ RUN rm -rf /var/lib/mysql && mkdir -p /var/lib/mysql /var/run/mysqld \
   && echo '[mysqld]\nskip-host-cache\nskip-name-resolve' > /etc/mysql/conf.d/docker.cnf
 RUN mariadb-install-db --user=mysql
 
-WORKDIR /usr/local/src
-RUN git clone https://github.com/nils-ohlmeier/sipsak
-WORKDIR /usr/local/src/sipsak
-RUN git checkout 0.9.8.1
-RUN autoreconf --install
-RUN ./configure
-RUN make
-RUN make install
+### WORKDIR /usr/local/src
+### RUN git clone https://github.com/nils-ohlmeier/sipsak
+### WORKDIR /usr/local/src/sipsak
+### RUN git checkout 0.9.8.1
+### RUN autoreconf --install
+### RUN ./configure
+### RUN make
+### RUN make install
 
 # RUN mkdir -p /usr/local/src/data/GeoLite2
 # RUN mkdir -p /usr/local/src/tmp
@@ -98,18 +112,46 @@ RUN make install
 # WORKDIR /usr/local/src
 # RUN rm -rf tmp
 
-COPY kamailio /usr/local/src/kamailio
+COPY ${KAMAILIO_TESTS_ROOT}/etc/openssl-fips.cfg.template /tmp/openssl-fips.cfg.template
+RUN set -e; \
+    OPENSSL_MODULES_DIR=$(openssl version -m | grep -w MODULESDIR: | awk '{ print $2 }' | tr -d \") ; \
+    OPENSSL_FIPS_SO="${OPENSSL_MODULES_DIR}/fips.so" ; \
+    if [ ! -s "${OPENSSL_FIPS_SO}" ]; then \
+        echo "ERROR: OpenSSL module ${OPENSSL_FIPS_SO} does not exist" && exit 1; \
+    fi; \
+    OPENSSL_FIPS_CFG_TEMPLATE="/tmp/openssl-fips.cfg.template"; \
+    OPENSSL_FIPS_MODULE_CFG="/etc/ssl/fipsmodule.cnf"; \
+    OPENSSL_CFG="/etc/ssl/openssl.cnf"; \
+    OPENSSL_FIPS_CFG="/etc/ssl/openssl-fips.cnf"; \
+    OPENSSL_CONF="" openssl fipsinstall \
+        -out "${OPENSSL_FIPS_MODULE_CFG}" \
+        -module "${OPENSSL_FIPS_SO}" \
+        -provider_name fips \
+        -mac_name HMAC \
+        -macopt digest:SHA256; \
+    export OPENSSL_MODULES_DIR OPENSSL_FIPS_SO OPENSSL_FIPS_MODULE_CFG OPENSSL_FIPS_CFG ; \
+    envsubst '${OPENSSL_MODULES_DIR},${OPENSSL_FIPS_SO},${OPENSSL_FIPS_MODULE_CFG},${OPENSSL_FIPS_CFG}' \
+        < "${OPENSSL_FIPS_CFG_TEMPLATE}" \
+        > "${OPENSSL_FIPS_CFG}"; \
+    if [ -f "${OPENSSL_FIPS_CFG}" ]; then \
+        mv "${OPENSSL_CFG}" "${OPENSSL_CFG}.bak"; \
+    fi; \
+    mv "${OPENSSL_FIPS_CFG}" "${OPENSSL_CFG}"; \
+    rm -f "${OPENSSL_FIPS_CFG_TEMPLATE}"
+
+COPY ${KAMAILIO_SRC_DIR} /usr/local/src/kamailio
 WORKDIR /usr/local/src/kamailio
-RUN mkdir build
-RUN git submodule update --init --remote misc/external/wolfssl/wolfssl
+RUN rm -rf build
+RUN mkdir -p build
+### RUN git submodule update --init --remote misc/external/wolfssl/wolfssl
 RUN make RADCLI=1 exclude_modules="app_python auth_arnacon db_cassandra db_oracle dnssec jwt jwt3 ndb_cassandra nats nsq osp rtp_media_server ruxc stirshaken tls_wolfssl" cfg
 # RUN make RADCLI=1 Q=0 CC_EXTRA_OPTS="-Wall" all
 # RUN make RADCLI=1 install
 RUN cmake -S . -B build -DMODULE_GROUP_NAME=ALL -DEXCLUDE_MODULES="app_python auth_arnacon db_cassandra db_oracle dnssec jwt jwt3 ndb_cassandra nats nsq osp rtp_media_server ruxc stirshaken tls_wolfssl"
-RUN cmake --build build
+RUN cmake --build build --parallel
 RUN cmake --build build -t dbschema
 RUN cmake --install build
-WORKDIR src/modules/tls
+WORKDIR /usr/local/src/kamailio/src/modules/tls
 RUN make install-tls-cert
 ENV DBENGINE=MYSQL
 ENV DBRWPW=kamailiorw
@@ -118,10 +160,20 @@ ENV DBROOTPW=ktestsrootpw
 RUN pwd
 RUN ls -la /usr/local/src
 
-COPY kamailio-tests /usr/local/src/kamailio-tests
-COPY kamailio-tests/etc/excludeunits.txt.debian13 /usr/local/src/kamailio-tests/excludeunits.txt
-RUN ls -la /usr/local/src/kamailio-tests
+RUN mkdir -p /usr/local/src/kamailio-tests
+COPY ${KAMAILIO_TESTS_ROOT}/docker /usr/local/src/kamailio-tests/docker
+COPY ${KAMAILIO_TESTS_ROOT}/etc /usr/local/src/kamailio-tests/etc
+COPY ${KAMAILIO_TESTS_ROOT}/ktestsctl /usr/local/src/kamailio-tests/ktestsctl
+COPY ${KAMAILIO_TESTS_ROOT}/libs /usr/local/src/kamailio-tests/libs
+COPY ${KAMAILIO_TESTS_ROOT}/LICENSE /usr/local/src/kamailio-tests/LICENSE
+COPY ${KAMAILIO_TESTS_ROOT}/README.md /usr/local/src/kamailio-tests/README.md
+COPY ${KAMAILIO_TESTS_ROOT}/units /usr/local/src/kamailio-tests/units
+COPY ${KAMAILIO_TESTS_ROOT}/etc/excludeunits.txt.debian13 /usr/local/src/kamailio-tests/excludeunits.txt
+
+RUN ls -la /usr/local/src/kamailio-tests/
 RUN ls -la /usr/local/src/kamailio-tests/units
+
+ENV KAMEXTRA=${KAMAILIO_SERVER_EXTRA_OPTIONS}
 WORKDIR /usr/local/src/kamailio-tests
 
 ENTRYPOINT ["/usr/local/src/kamailio-tests/ktestsctl"]
