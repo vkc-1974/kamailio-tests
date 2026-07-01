@@ -6,6 +6,7 @@ ARG DEBIAN_BASE
 ARG KAMAILIO_SRC_DIR=kamailio
 ARG KAMAILIO_TESTS_ROOT=kamailio-tests
 ARG KAMAILIO_SERVER_EXTRA_OPTIONS
+ARG FIPS_MODE=1
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get update
 RUN apt-get -y upgrade
@@ -13,7 +14,6 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -y install --assume-yes \
   apt-utils passwd \
   autoconf gcc g++ make cmake procps \
   coreutils exuberant-ctags curl gawk gdb git jq lynx netcat-traditional ngrep sed sip-tester vim wget \
-  sipsak \
   bison libtool \
   debhelper \
   default-libmysqlclient-dev \
@@ -79,7 +79,10 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -y install --assume-yes \
   libfips203-dev \
   openssl-provider-fips \
   gettext-base \
-  hostname
+  hostname \
+  bsdutils
+
+###    sipsak 
 
 RUN groupadd -r mysql && useradd -r -g mysql mysql
 
@@ -94,14 +97,14 @@ RUN rm -rf /var/lib/mysql && mkdir -p /var/lib/mysql /var/run/mysqld \
   && echo '[mysqld]\nskip-host-cache\nskip-name-resolve' > /etc/mysql/conf.d/docker.cnf
 RUN mariadb-install-db --user=mysql
 
-### WORKDIR /usr/local/src
-### RUN git clone https://github.com/nils-ohlmeier/sipsak
-### WORKDIR /usr/local/src/sipsak
-### RUN git checkout 0.9.8.1
-### RUN autoreconf --install
-### RUN ./configure
-### RUN make
-### RUN make install
+WORKDIR /usr/local/src
+RUN git clone https://github.com/nils-ohlmeier/sipsak
+WORKDIR /usr/local/src/sipsak
+RUN git checkout 0.9.8.1
+RUN autoreconf --install
+RUN ./configure
+RUN make
+RUN make install
 
 # RUN mkdir -p /usr/local/src/data/GeoLite2
 # RUN mkdir -p /usr/local/src/tmp
@@ -114,30 +117,35 @@ RUN mariadb-install-db --user=mysql
 
 COPY ${KAMAILIO_TESTS_ROOT}/etc/openssl-fips.cfg.template /tmp/openssl-fips.cfg.template
 RUN set -e; \
-    OPENSSL_MODULES_DIR=$(openssl version -m | grep -w MODULESDIR: | awk '{ print $2 }' | tr -d \") ; \
-    OPENSSL_FIPS_SO="${OPENSSL_MODULES_DIR}/fips.so" ; \
-    if [ ! -s "${OPENSSL_FIPS_SO}" ]; then \
-        echo "ERROR: OpenSSL module ${OPENSSL_FIPS_SO} does not exist" && exit 1; \
-    fi; \
-    OPENSSL_FIPS_CFG_TEMPLATE="/tmp/openssl-fips.cfg.template"; \
-    OPENSSL_FIPS_MODULE_CFG="/etc/ssl/fipsmodule.cnf"; \
-    OPENSSL_CFG="/etc/ssl/openssl.cnf"; \
-    OPENSSL_FIPS_CFG="/etc/ssl/openssl-fips.cnf"; \
-    OPENSSL_CONF="" openssl fipsinstall \
-        -out "${OPENSSL_FIPS_MODULE_CFG}" \
-        -module "${OPENSSL_FIPS_SO}" \
-        -provider_name fips \
-        -mac_name HMAC \
-        -macopt digest:SHA256; \
-    export OPENSSL_MODULES_DIR OPENSSL_FIPS_SO OPENSSL_FIPS_MODULE_CFG OPENSSL_FIPS_CFG ; \
-    envsubst '${OPENSSL_MODULES_DIR},${OPENSSL_FIPS_SO},${OPENSSL_FIPS_MODULE_CFG},${OPENSSL_FIPS_CFG}' \
-        < "${OPENSSL_FIPS_CFG_TEMPLATE}" \
-        > "${OPENSSL_FIPS_CFG}"; \
-    if [ -f "${OPENSSL_FIPS_CFG}" ]; then \
-        mv "${OPENSSL_CFG}" "${OPENSSL_CFG}.bak"; \
-    fi; \
-    mv "${OPENSSL_FIPS_CFG}" "${OPENSSL_CFG}"; \
-    rm -f "${OPENSSL_FIPS_CFG_TEMPLATE}"
+    if [ "${FIPS_MODE}" = "1" ]; then \
+        echo "FIPS mode is ON"; \
+        OPENSSL_MODULES_DIR=$(openssl version -m | grep -w MODULESDIR: | awk '{ print $2 }' | tr -d \") ; \
+        OPENSSL_FIPS_SO="${OPENSSL_MODULES_DIR}/fips.so" ; \
+        if [ ! -s "${OPENSSL_FIPS_SO}" ]; then \
+            echo "ERROR: OpenSSL module ${OPENSSL_FIPS_SO} does not exist" && exit 1; \
+        fi; \
+        OPENSSL_FIPS_CFG_TEMPLATE="/tmp/openssl-fips.cfg.template"; \
+        OPENSSL_FIPS_MODULE_CFG="/etc/ssl/fipsmodule.cnf"; \
+        OPENSSL_CFG="/etc/ssl/openssl.cnf"; \
+        OPENSSL_FIPS_CFG="/etc/ssl/openssl-fips.cnf"; \
+        OPENSSL_CONF="" openssl fipsinstall \
+            -out "${OPENSSL_FIPS_MODULE_CFG}" \
+            -module "${OPENSSL_FIPS_SO}" \
+            -provider_name fips \
+            -mac_name HMAC \
+            -macopt digest:SHA256; \
+        export OPENSSL_MODULES_DIR OPENSSL_FIPS_SO OPENSSL_FIPS_MODULE_CFG OPENSSL_FIPS_CFG ; \
+        envsubst '${OPENSSL_MODULES_DIR},${OPENSSL_FIPS_SO},${OPENSSL_FIPS_MODULE_CFG},${OPENSSL_FIPS_CFG}' \
+            < "${OPENSSL_FIPS_CFG_TEMPLATE}" \
+            > "${OPENSSL_FIPS_CFG}"; \
+        if [ -f "${OPENSSL_FIPS_CFG}" ]; then \
+            mv "${OPENSSL_CFG}" "${OPENSSL_CFG}.bak"; \
+        fi; \
+        mv "${OPENSSL_FIPS_CFG}" "${OPENSSL_CFG}"; \
+        #### rm -f "${OPENSSL_FIPS_CFG_TEMPLATE}"; \
+    else \
+        echo "FIPS mode is OFF"; \
+    fi
 
 COPY ${KAMAILIO_SRC_DIR} /usr/local/src/kamailio
 WORKDIR /usr/local/src/kamailio
