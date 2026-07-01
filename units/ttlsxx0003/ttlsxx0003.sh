@@ -84,7 +84,9 @@ fi
 
 # start kamailio
 
-${KAMBIN} -P "${KAMPID}" -w "${KAMRUN}" -Y "${KAMRUN}" -a no -f "$CFGFILE" > /dev/null
+CMD="${KAMBIN} -P \"${KAMPID}\" -w \"${KAMRUN}\" -Y \"${KAMRUN}\" -a no -f \"${CFGFILE}\" -ddd ${KAMEXTRA}"
+echo "${CMD}"
+eval "${CMD}" > /dev/null
 ret=$?
 
 sleep 1

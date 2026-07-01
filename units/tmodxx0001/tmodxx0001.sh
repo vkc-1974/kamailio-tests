@@ -9,7 +9,9 @@ OPT_DEFINES=""
 [ -f "${MODS_DIR}/rtp_media_server.so" ] && OPT_DEFINES="${OPT_DEFINES} -A WITH_RTP_MEDIA_SERVER"
 
 echo "--- start kamailio -f ./kamailio-allmods.cfg ${OPT_DEFINES}"
-${KAMBIN} -f ./kamailio-allmods.cfg -dd -E ${OPT_DEFINES} 2>&1 | tee /tmp/kamailio-allmods.log
+CMD="${KAMBIN} -f ./kamailio-allmods.cfg -dd -E ${OPT_DEFINES} ${KAMEXTRA}"
+echo "${CMD}"
+eval "${CMD}" 2>&1 | tee /tmp/kamailio-allmods.log
 echo
 echo "--- grep output"
 echo
@@ -19,7 +21,9 @@ if [ ! "$ret" -eq 1 ] ; then
     exit 1
 fi
 echo "--- start kamailio -f ./kamailio-allmods.cfg -A WITH_IMS -A WITH_RTPPROXY ${OPT_DEFINES}"
-${KAMBIN} -f ./kamailio-allmods.cfg -dd -E -A WITH_IMS -A WITH_RTPPROXY ${OPT_DEFINES} 2>&1 | tee /tmp/kamailio-allmods.log
+CMD="${KAMBIN} -f ./kamailio-allmods.cfg -dd -E -A WITH_IMS -A WITH_RTPPROXY ${OPT_DEFINES} ${KAMEXTRA}"
+echo "${CMD}"
+eval "${CMD}" 2>&1 | tee /tmp/kamailio-allmods.log
 echo
 echo "--- grep output"
 echo

@@ -5,7 +5,9 @@
 
 echo
 echo "--- start with default config and -A WITH_TLS"
-${KAMBIN} -P ${KAMPID} -w ${KAMRUN} -Y ${KAMRUN} -a no -A WITH_TLS -ddd -E 2>&1 | tee /tmp/kamailio-ttlsxx0001.log &
+CMD="${KAMBIN} -P ${KAMPID} -w ${KAMRUN} -Y ${KAMRUN} -a no -A WITH_TLS -ddd -E ${KAMEXTRA}"
+echo "${CMD}"
+eval "${CMD}" 2>&1 | tee /tmp/kamailio-ttlsxx0001.log &
 ret=$?
 sleep 1
 timeout 3 openssl s_client -connect 127.0.0.1:5061 -showcerts

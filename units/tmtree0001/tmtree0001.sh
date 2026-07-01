@@ -10,7 +10,9 @@ ${KAMCTL} mtree add mtree 2345678901 bob
 ${KAMCTL} mtree show mtree
 ${KAMCTL} mtree dump mtree
 echo "--- start kamailio -f ./kamailio-tmtree0001.cfg"
-${KAMBIN} -P ${KAMPID} -w ${KAMRUN} -Y ${KAMRUN} -f ./kamailio-tmtree0001.cfg -a no -ddd -E 2>&1 | tee /tmp/kamailio-tmtree0001.log &
+CMD="${KAMBIN} -P ${KAMPID} -w ${KAMRUN} -Y ${KAMRUN} -f ./kamailio-tmtree0001.cfg -a no -ddd -E ${KAMEXTRA}"
+echo "${CMD}"
+eval "${CMD}" 2>&1 | tee /tmp/kamailio-tmtree0001.log &
 ret=$?
 sleep 1
 sipsak -s sip:1234567890@127.0.0.1

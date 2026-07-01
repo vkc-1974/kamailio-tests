@@ -7,7 +7,9 @@ echo "--- run: ${KAMCTL} add alice@127.0.0.1 ..."
 ${KAMCTL} add alice@127.0.0.1 alice123
 ${KAMCTL} db show subscriber
 echo "--- start kamailio -f ./kamailio-tauthx0001.cfg"
-${KAMBIN} -P ${KAMPID} -w ${KAMRUN} -Y ${KAMRUN} -f ./kamailio-tauthx0001.cfg -a no -ddd -E 2>&1 | tee /tmp/kamailio-tauthx0001.log &
+CMD="${KAMBIN} -P ${KAMPID} -w ${KAMRUN} -Y ${KAMRUN} -f ./kamailio-tauthx0001.cfg -a no -ddd -E ${KAMEXTRA}"
+echo "${CMD}"
+eval "${CMD}" 2>&1 | tee /tmp/kamailio-tauthx0001.log &
 ret=$?
 sleep 1
 sipsak -u alice -a alice123 -H 127.0.0.1 -c sip:alice@127.0.0.1 -s sip:bob@127.0.0.1
@@ -24,7 +26,9 @@ if [ ! "$ret" -eq 0 ] ; then
 fi
 echo "--- start kamailio -f ./kamailio-tauthx0001.cfg -A WITH_MULTIDOMAIN"
 rm -f /tmp/kamailio-tauthx0001.log
-${KAMBIN} -P ${KAMPID} -w ${KAMRUN} -Y ${KAMRUN} -f ./kamailio-tauthx0001.cfg -A WITH_MULTIDOMAIN -a no -ddd -E 2>&1 | tee /tmp/kamailio-tauthx0001.log &
+CMD="${KAMBIN} -P ${KAMPID} -w ${KAMRUN} -Y ${KAMRUN} -f ./kamailio-tauthx0001.cfg -A WITH_MULTIDOMAIN -a no -ddd -E ${KAMEXTRA}"
+echo "${CMD}"
+eval "${CMD}" 2>&1 | tee /tmp/kamailio-tauthx0001.log &
 ret=$?
 sleep 1
 sipsak -u alice -a alice123 -H 127.0.0.1 -c sip:alice@127.0.0.1 -s sip:bob@127.0.0.1

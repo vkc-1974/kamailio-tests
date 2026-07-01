@@ -9,7 +9,9 @@ rm -f /tmp/kamailio-tlcust0001.netcat
 nc -u -l -p 24680 | tee /tmp/kamailio-tlcust0001.netcat &
 sleep 1
 echo "--- start kamailio -f ./kamailio-tlcust0001.cfg"
-${KAMBIN} -P ${KAMPID} -w ${KAMRUN} -Y ${KAMRUN} -f ./kamailio-tlcust0001.cfg -a no 2>&1 | tee /tmp/kamailio-tlcust0001.log &
+CMD="${KAMBIN} -P ${KAMPID} -w ${KAMRUN} -Y ${KAMRUN} -f ./kamailio-tlcust0001.cfg -a no ${KAMEXTRA}"
+echo "${CMD}"
+eval "${CMD}" 2>&1 | tee /tmp/kamailio-tlcust0001.log &
 ret=$?
 sleep 2
 echo "--- run sipsak -s sip:alice@127.0.0.1"

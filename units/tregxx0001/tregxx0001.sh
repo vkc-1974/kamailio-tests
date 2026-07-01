@@ -8,8 +8,9 @@ LOG=/tmp/kamailio-tregxx0001.log
 function run() {
 	sed -e "s/#mask#/${mask}/g" ./kamailio-tregxx0001-inc > ./kamailio-tregxx0001-inc.cfg
 	echo "--- start kamailio -f ./kamailio-tregxx0001.cfg with mask $mask"
-	${KAMBIN} -P ${KAMPID} -w ${KAMRUN} -Y ${KAMRUN} \
-		-f ./kamailio-tregxx0001.cfg -a no -ddd -E 2>&1 | tee ${LOG} &
+	CMD="${KAMBIN} -P ${KAMPID} -w ${KAMRUN} -Y ${KAMRUN} -f ./kamailio-tregxx0001.cfg -a no -ddd -E ${KAMEXTRA}"
+    echo "${CMD}"
+    eval "${CMD}" 2>&1 | tee ${LOG} &
 	sleep 1
 	sipsak -U -s sip:test@127.0.0.1 -C sip:test@127.2.2.1:5066
 	sipsak -M -s sip:test@127.0.0.1

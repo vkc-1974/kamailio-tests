@@ -6,7 +6,9 @@
 python3 http_server.py &
 
 echo "--- start kamailio -f ./kamailio-thacxx0006.cfg"
-${KAMBIN} -P ${KAMPID} -w ${KAMRUN} -Y ${KAMRUN} -f ./kamailio-thacxx0006.cfg -a no -dd -E 2>&1 | tee /tmp/kamailio-thacxx0006.log &
+CMD="${KAMBIN} -P ${KAMPID} -w ${KAMRUN} -Y ${KAMRUN} -f ./kamailio-thacxx0006.cfg -a no -dd -E ${KAMEXTRA}"
+echo "${CMD}"
+eval "${CMD}" 2>&1 | tee /tmp/kamailio-thacxx0006.log &
 ret=$?
 
 sleep 3

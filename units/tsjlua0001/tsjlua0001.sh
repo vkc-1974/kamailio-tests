@@ -5,7 +5,9 @@
 
 cp kamailio-tsjlua0001.lua /tmp/
 echo "--- start kamailio -f ./kamailio-tsjlua0001.cfg"
-${KAMBIN} -P ${KAMPID} -w ${KAMRUN} -Y ${KAMRUN} -f ./kamailio-tsjlua0001.cfg -a no -ddd -E 2>&1 | tee /tmp/kamailio-tsjlua0001.log &
+CMD="${KAMBIN} -P ${KAMPID} -w ${KAMRUN} -Y ${KAMRUN} -f ./kamailio-tsjlua0001.cfg -a no -ddd -E ${KAMEXTRA}"
+echo "${CMD}"
+eval "${CMD}" 2>&1 | tee /tmp/kamailio-tsjlua0001.log &
 ret=$?
 sleep 1
 sipsak -s sip:alice@127.0.0.1

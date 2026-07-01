@@ -3,7 +3,9 @@
 . ../../etc/config
 . ../../libs/utils
 
-${KAMBIN} -P ${KAMPID} -w ${KAMRUN} -Y ${KAMRUN} -a no
+CMD="${KAMBIN} -P ${KAMPID} -w ${KAMRUN} -Y ${KAMRUN} -a no ${KAMEXTRA}"
+echo "${CMD}"
+eval "${CMD}"
 ret=$?
 sleep 1
 if [ ! "$ret" -eq 0 ] ; then

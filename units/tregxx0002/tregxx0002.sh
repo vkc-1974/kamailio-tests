@@ -7,8 +7,9 @@ LOG=/tmp/kamailio-tregxx0001.log
 
 function run() {
 	echo "--- start kamailio -f ./kamailio-tregxx0002.cfg"
-	${KAMBIN} -P ${KAMPID} -w ${KAMRUN} -Y ${KAMRUN} \
-		-f ./kamailio-tregxx0002.cfg -a no -ddd -E 2>&1 | tee ${LOG} &
+	CMD="${KAMBIN} -P ${KAMPID} -w ${KAMRUN} -Y ${KAMRUN} -f ./kamailio-tregxx0002.cfg -a no -ddd -E ${KAMEXTRA}"
+    echo "${CMD}"
+    eval "${CMD}" 2>&1 | tee ${LOG} &
 	sleep 1
 	sipsak -U -s sip:test@127.0.0.1 -C sip:test@127.2.2.1:5066
 	sipsak -U -s sip:test@127.0.0.1 -C sip:test@127.2.2.2:5066

@@ -6,8 +6,9 @@
 LOG=/tmp/kamailio-tavpop0001.log
 
 echo "--- start kamailio -f ./kamailio-tavpop0001.cfg"
-${KAMBIN} -P ${KAMPID} -w ${KAMRUN} -Y ${KAMRUN} \
-	-f ./kamailio-tavpop0001.cfg -a no -ddd -E 2>&1 | tee ${LOG} &
+CMD="${KAMBIN} -P ${KAMPID} -w ${KAMRUN} -Y ${KAMRUN} -f ./kamailio-tavpop0001.cfg -a no -ddd -E ${KAMEXTRA}"
+echo "${CMD}"
+eval "${CMD}" 2>&1 | tee ${LOG} &
 sleep 1
 sipsak -M -s sip:test1test@127.0.0.1
 sleep 1

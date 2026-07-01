@@ -14,19 +14,24 @@ function check_out() {
 }
 
 echo "--- run config check"
-${KAMBIN} -c -f ./kamailio-tcfgxx0003.cfg >/dev/null 2>&1
+CMD="${KAMBIN} -c -f ./kamailio-tcfgxx0003.cfg ${KAMEXTRA}"
+echo "${CMD}"
+eval "${CMD}" >/dev/null 2>&1
 ret=$?
 if [ "$ret" -eq 0 ] ; then
     echo "kamailio didn't fail"
     exit 1
 fi
-${KAMBIN} -c -f ./kamailio-tcfgxx0003.cfg 2>&1 | tee ${LOG}
+CMD="${KAMBIN} -c -f ./kamailio-tcfgxx0003.cfg ${KAMEXTRA}"
+echo "${CMD}"
+eval "${CMD}" | tee ${LOG}
 check_out
 
 echo
 echo "--- start kamailio -f ./kamailio-tcfgxx0003.cfg"
-${KAMBIN} -P ${KAMPID} -w ${KAMRUN} -Y ${KAMRUN} -a no -ddd -E \
-    -f ./kamailio-tcfgxx0003.cfg >/dev/null 2>&1
+CMD="${KAMBIN} -P ${KAMPID} -w ${KAMRUN} -Y ${KAMRUN} -a no -ddd -E -f ./kamailio-tcfgxx0003.cfg ${KAMEXTRA}"
+echo "${CMD}"
+eval "${CMD}" >/dev/null 2>&1
 ret=$?
 if [ "$ret" -eq 0 ] ; then
     sleep 1
@@ -34,8 +39,9 @@ if [ "$ret" -eq 0 ] ; then
     echo "kamailio didn't fail"
     exit 1
 fi
-${KAMBIN} -P ${KAMPID} -w ${KAMRUN} -Y ${KAMRUN} -a no -ddd -E \
-    -f ./kamailio-tcfgxx0003.cfg 2>&1 | tee ${LOG}
+CMD="${KAMBIN} -P ${KAMPID} -w ${KAMRUN} -Y ${KAMRUN} -a no -ddd -E -f ./kamailio-tcfgxx0003.cfg ${KAMEXTRA}"
+echo "${CMD}"
+eval "${CMD}" 2>&1 | tee ${LOG}
 check_out
 
 exit 0

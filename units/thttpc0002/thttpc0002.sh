@@ -6,7 +6,9 @@
 python3 http_server.py &
 
 echo "--- start kamailio -f ./kamailio-thttpc0002.cfg"
-${KAMBIN} -P ${KAMPID} -w ${KAMRUN} -Y ${KAMRUN} -f ./kamailio-thttpc0002.cfg -a no -ddd -E 2>&1 | tee /tmp/kamailio-thttpc0002.log &
+CMD="${KAMBIN} -P ${KAMPID} -w ${KAMRUN} -Y ${KAMRUN} -f ./kamailio-thttpc0002.cfg -a no -ddd -E ${KAMEXTRA}"
+echo "${CMD}"
+eval "${CMD}" 2>&1 | tee /tmp/kamailio-thttpc0002.log &
 ret=$?
 sleep 1
 sipsak -s sip:test@127.0.0.1

@@ -111,9 +111,15 @@ check_sip_options() {
 # --- helper: start kamailio with a given tls config ---
 start_with_tls() {
 	local tls_cfg="$1"
+    local log_file="$2"
+    if [ -z "${log_file}" ]; then
+        log_file="/dev/null"
+    fi
 	local run_cfg="/tmp/ttlsxx0002-kamailio.cfg"
 	sed "s|__TLS_CFG__|${tls_cfg}|g" "$CFG" > "$run_cfg"
-	${KAMBIN} -P "${KAMPID}" -w "${KAMRUN}" -Y "${KAMRUN}" -a no -f "$run_cfg" &> /dev/null
+	CMD="${KAMBIN} -P \"${KAMPID}\" -w \"${KAMRUN}\" -Y \"${KAMRUN}\" -a no -f \"$run_cfg\" -ddd ${KAMEXTRA}"
+    echo "${CMD}"
+    eval "${CMD}" &> "${log_file}"
 	local rc=$?
 	sleep 1
 	return $rc
@@ -124,7 +130,9 @@ start_with_tls() {
 # ============================================================
 echo
 echo "--- test 1: dual-cert default handshake picks ECDSA"
-if start_with_tls "$CERT_DIR/tls-dual.cfg"; then
+
+log_name="/tmp/ttlsxx0002_test-1_tls-dual.log"
+if start_with_tls "$CERT_DIR/tls-dual.cfg" "${log_name}"; then
 	if ! check_cert_cn "kamailio-test-ecdsa"; then
 		echo "FAIL: dual-cert default should pick ECDSA"
 		ret=1
@@ -133,6 +141,12 @@ else
 	echo "FAIL: kamailio did not start (dual-cert)"
 	ret=1
 fi
+echo "===================================================================="
+echo "Log file: ${log_name}, rows: $(wc -l ${log_name} | awk '//{ print $1 }')"
+echo "===================================================================="
+cat "${log_name}"
+echo "===================================================================="
+
 
 # ============================================================
 # Test 2: Dual-cert — force RSA via sigalgs
@@ -175,7 +189,8 @@ sleep 1
 # ============================================================
 if [ "$ret" -eq 0 ]; then
 	echo "--- test 5: RSA-only serves RSA cert"
-	if start_with_tls "$CERT_DIR/tls-rsa.cfg"; then
+    log_name="/tmp/ttlsxx0002_test-5_tls-rsa.log"
+	if start_with_tls "$CERT_DIR/tls-rsa.cfg" "${log_name}"; then
 		if ! check_cert_cn "kamailio-test-rsa"; then
 			echo "FAIL: RSA-only should serve RSA cert"
 			ret=1
@@ -187,13 +202,19 @@ if [ "$ret" -eq 0 ]; then
 	kill_pidfile "${KAMPID}" 2>/dev/null
 	sleep 1
 fi
+echo "===================================================================="
+echo "Log file: ${log_name}, rows: $(wc -l ${log_name} | awk '//{ print $1 }')"
+echo "===================================================================="
+cat "${log_name}"
+echo "===================================================================="
 
 # ============================================================
 # Test 6: ECDSA-only — serves ECDSA cert
 # ============================================================
 if [ "$ret" -eq 0 ]; then
 	echo "--- test 6: ECDSA-only serves ECDSA cert"
-	if start_with_tls "$CERT_DIR/tls-ecdsa.cfg"; then
+    log_name="/tmp/ttlsxx0002_test-6_tls-ecdsa.log"
+	if start_with_tls "$CERT_DIR/tls-ecdsa.cfg" "${log_name}"; then
 		if ! check_cert_cn "kamailio-test-ecdsa"; then
 			echo "FAIL: ECDSA-only should serve ECDSA cert"
 			ret=1
@@ -204,6 +225,11 @@ if [ "$ret" -eq 0 ]; then
 	fi
 	kill_pidfile "${KAMPID}" 2>/dev/null
 fi
+echo "===================================================================="
+echo "Log file: ${log_name}, rows: $(wc -l ${log_name} | awk '//{ print $1 }')"
+echo "===================================================================="
+cat "${log_name}"
+echo "===================================================================="
 
 # --- cleanup ---
 rm -rf "$CERT_DIR"
