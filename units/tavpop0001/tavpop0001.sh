@@ -10,7 +10,19 @@ CMD="${KAMBIN} -P ${KAMPID} -w ${KAMRUN} -Y ${KAMRUN} -f ./kamailio-tavpop0001.c
 echo "${CMD}"
 eval "${CMD}" 2>&1 | tee ${LOG} &
 sleep 1
-sipsak -M -s sip:test1test@127.0.0.1
+
+# sipsak MESSAGE mode segfaults (nils-ohlmeier/sipsak#95); use SIPp instead.
+CMD="sipp 127.0.0.1:5060 -sf ./sipp_message_uac.xml -s test1test -m 1 -timeout 10s -timeout_error -trace_err -nostdin"
+echo "--- start sipp"
+echo "${CMD}"
+eval "${CMD}"
+sipp_ret=$?
+echo "--------- sipp (exit=${sipp_ret})"
+if [ ! "$sipp_ret" -eq 0 ] ; then
+	kill_pidfile ${KAMPID} 2>/dev/null || true
+	exit 1
+fi
+
 sleep 1
 kill_pidfile ${KAMPID}
 sleep 1

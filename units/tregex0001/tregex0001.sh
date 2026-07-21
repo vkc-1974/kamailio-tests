@@ -12,13 +12,37 @@ echo "${CMD}"
 eval "${CMD}" 2>&1 | tee ${LOG} &
 ret=$?
 sleep 1
-sipsak -s sip:test@127.0.0.1 -B "HOLA caracola"
+
+# sipsak MESSAGE mode segfaults (nils-ohlmeier/sipsak#95); use SIPp instead.
+SIPP_BASE="sipp 127.0.0.1:5060 -sf ./sipp_message_body_uac.xml -s test -m 1 -timeout 10s -timeout_error -trace_err -nostdin"
+
+CMD="${SIPP_BASE} -key msgbody \"HOLA caracola\""
+echo "--- start sipp (HOLA)"
+echo "${CMD}"
+eval "${CMD}"
+sipp_ret=$?
+echo "--------- sipp HOLA (exit=${sipp_ret})"
+if [ ! "$sipp_ret" -eq 0 ] ; then
+	kill_pidfile ${KAMPID} 2>/dev/null || true
+	exit 1
+fi
 
 echo "--- regex reload ---"
 cp regex_groups_2 /tmp/regex_group
 ${KAMCTL} kamcmd regex.reload
 sleep 1
-sipsak -s sip:test@127.0.0.1 -B "ADIOS caracola"
+
+CMD="${SIPP_BASE} -key msgbody \"ADIOS caracola\""
+echo "--- start sipp (ADIOS)"
+echo "${CMD}"
+eval "${CMD}"
+sipp_ret=$?
+echo "--------- sipp ADIOS (exit=${sipp_ret})"
+if [ ! "$sipp_ret" -eq 0 ] ; then
+	kill_pidfile ${KAMPID} 2>/dev/null || true
+	exit 1
+fi
+
 sleep 1
 kill_pidfile ${KAMPID}
 sleep 1
@@ -40,4 +64,3 @@ if ! grep -q '\^ADIOS group 0 matches' ${LOG} ; then
     exit 1
 fi
 exit 0
-

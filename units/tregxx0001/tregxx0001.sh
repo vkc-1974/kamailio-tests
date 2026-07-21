@@ -5,15 +5,39 @@
 
 LOG=/tmp/kamailio-tregxx0001.log
 
+SIPP_FLAGS="-m 1 -timeout 10s -timeout_error -trace_err -nostdin"
+
 function run() {
 	sed -e "s/#mask#/${mask}/g" ./kamailio-tregxx0001-inc > ./kamailio-tregxx0001-inc.cfg
 	echo "--- start kamailio -f ./kamailio-tregxx0001.cfg with mask $mask"
 	CMD="${KAMBIN} -P ${KAMPID} -w ${KAMRUN} -Y ${KAMRUN} -f ./kamailio-tregxx0001.cfg -a no -ddd -E ${KAMEXTRA}"
-    echo "${CMD}"
-    eval "${CMD}" 2>&1 | tee ${LOG} &
+	echo "${CMD}"
+	eval "${CMD}" 2>&1 | tee ${LOG} &
 	sleep 1
-	sipsak -U -s sip:test@127.0.0.1 -C sip:test@127.2.2.1:5066
-	sipsak -M -s sip:test@127.0.0.1
+
+	# sipsak MESSAGE/REGISTER paths segfault on several distros; use SIPp.
+	CMD="sipp 127.0.0.1:5060 -sf ./sipp_register_uac.xml -s test ${SIPP_FLAGS}"
+	echo "--- start sipp REGISTER"
+	echo "${CMD}"
+	eval "${CMD}"
+	sipp_ret=$?
+	echo "--------- sipp REGISTER (exit=${sipp_ret})"
+	if [ ! "$sipp_ret" -eq 0 ] ; then
+		kill_pidfile ${KAMPID} 2>/dev/null || true
+		exit 1
+	fi
+
+	CMD="sipp 127.0.0.1:5060 -sf ./sipp_message_uac.xml -s test ${SIPP_FLAGS}"
+	echo "--- start sipp MESSAGE"
+	echo "${CMD}"
+	eval "${CMD}"
+	sipp_ret=$?
+	echo "--------- sipp MESSAGE (exit=${sipp_ret})"
+	if [ ! "$sipp_ret" -eq 0 ] ; then
+		kill_pidfile ${KAMPID} 2>/dev/null || true
+		exit 1
+	fi
+
 	sleep 1
 	kill_pidfile ${KAMPID}
 	sleep 1
@@ -27,7 +51,7 @@ function check() {
 		exit 1
 	fi
 	if ! grep -q "check\\[MESSAGE\\]: ${val} exists" ${LOG}; then
-		echo "[${mask}] ${val} not found in REGISTER"
+		echo "[${mask}] ${val} not found in MESSAGE"
 		exit 1
 
 	fi
@@ -40,7 +64,7 @@ function check_not() {
 		exit 1
 	fi
 	if grep -q "check\\[MESSAGE\\]: ${val} exists" ${LOG}; then
-		echo "[${mask}] ${val} found in REGISTER"
+		echo "[${mask}] ${val} found in MESSAGE"
 		exit 1
 
 	fi

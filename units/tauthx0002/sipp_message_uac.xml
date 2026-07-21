@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!DOCTYPE scenario SYSTEM "sipp.dtd">
+<!--
+  UAC: one SIP MESSAGE (alice -> bob) with plain-text body.
+  Expects final 200 from Kamailio (tauthx0002 auth_xkeys Lua path).
+-->
+<scenario name="tauthx0002_message_uac">
+  <send retrans="500">
+    <![CDATA[
+MESSAGE sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+From: sip:alice@[local_ip];tag=[pid]SIPpTag00[call_number]
+To: sip:[service]@[remote_ip]
+Call-ID: [call_id]
+CSeq: 1 MESSAGE
+Contact: sip:alice@[local_ip]:[local_port]
+Max-Forwards: 70
+Content-Type: text/plain
+Content-Length: [len]
+
+hello there
+    ]]>
+  </send>
+
+  <recv response="200" rtd="true" />
+
+  <!-- optional final ACK is not used for MESSAGE -->
+</scenario>
