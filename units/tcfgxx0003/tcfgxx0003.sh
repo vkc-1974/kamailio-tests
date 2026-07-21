@@ -24,7 +24,7 @@ if [ "$ret" -eq 0 ] ; then
 fi
 CMD="${KAMBIN} -c -f ./kamailio-tcfgxx0003.cfg ${KAMEXTRA}"
 echo "${CMD}"
-eval "${CMD}" | tee ${LOG}
+eval "${CMD}" 2>&1 | tee ${LOG}
 check_out
 
 echo
