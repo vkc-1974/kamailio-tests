@@ -8,9 +8,15 @@ ARG KAMAILIO_TESTS_ROOT=kamailio-tests
 ARG KAMAILIO_SERVER_EXTRA_OPTIONS
 ARG FIPS_MODE=1
 
-RUN DEBIAN_FRONTEND=noninteractive apt-get update
-RUN apt-get -y upgrade
-RUN DEBIAN_FRONTEND=noninteractive apt-get -y install --assume-yes \
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && \
+    apt-get \
+    -y \
+    -o Dpkg::Options::="--force-confdef" \
+    -o Dpkg::Options::="--force-confold" upgrade
+RUN apt-get -y install --assume-yes \
   apt-utils passwd \
   autoconf gcc g++ make cmake procps \
   coreutils exuberant-ctags curl gawk gdb git jq lynx netcat-traditional ngrep sed sip-tester vim wget \
